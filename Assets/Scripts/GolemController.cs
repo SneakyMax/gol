@@ -41,6 +41,8 @@ namespace Assets.Scripts
 
         public float MinMoveParticles = 0.1f;
 
+        public float MaxDistanceFromCenter = 1.0f;
+
         [Header("Roll Ball")]
         public float MinRollScale = 0.5f;
 
@@ -216,6 +218,13 @@ namespace Assets.Scripts
             else
             {
                 AccelerateTowardsTarget();
+            }
+
+            var distanceFromParent = transform.localPosition.DistanceTo(transform.parent.localPosition);
+            if (distanceFromParent >= MaxDistanceFromCenter)
+            {
+                transform.localPosition = (transform.localPosition - transform.parent.localPosition).normalized *
+                                          MaxDistanceFromCenter;
             }
 
             Dampening();

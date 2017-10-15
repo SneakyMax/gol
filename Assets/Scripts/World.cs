@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using NUnit.Framework.Internal.Execution;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -19,6 +20,8 @@ namespace Assets.Scripts
         public GolObject Kitten { get { return Get("Kitten"); } }
 
         public GameObject Ded;
+
+        public GameObject Countdown;
 
         public ICollection<GolObject> Interactables
         {
@@ -63,11 +66,22 @@ namespace Assets.Scripts
         public void Dead()
         {
             Ded.SetActive(true);
+            Countdown.SetActive(true);
+
+            Delay.Of(5, Restart);
         }
 
         public void Restart()
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
+        public void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                Application.Quit();
+            }
         }
     }
 }

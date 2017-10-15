@@ -66,6 +66,11 @@ namespace Assets.Scripts
 
         public GolemController Controller { get; private set; }
 
+        public GameObject ShowMoreMagic;
+        public GameObject ShowLessMagic;
+        public GameObject ShowMoreRock;
+        public GameObject ShowLessRock;
+
         public GameObject ShowSad;
 
         private bool maybeDead;
@@ -99,14 +104,22 @@ namespace Assets.Scripts
 
         private void CheckSad()
         {
-            var isSad =
-                CurrentRockPercent < LowerSadStart ||
-                CurrentRockPercent > UpperSadStart ||
-                CurrentMagicPercent < LowerSadStart ||
-                CurrentMagicPercent > UpperSadStart;
+            var moreRock = CurrentRockPercent < LowerSadStart;
+            var lessRock = CurrentRockPercent > UpperSadStart;
+            var moreMagic = CurrentMagicPercent < LowerSadStart;
+            var lessMagic = CurrentMagicPercent > UpperSadStart;
 
-            if(ShowSad.activeInHierarchy != isSad)
-                ShowSad.SetActive(isSad);
+            if (ShowMoreRock.activeInHierarchy != moreRock)
+                ShowMoreRock.SetActive(moreRock);
+
+            if (ShowLessRock.activeInHierarchy != lessRock)
+                ShowLessRock.SetActive(lessRock);
+
+            if (ShowMoreMagic.activeInHierarchy != moreMagic)
+                ShowMoreMagic.SetActive(moreMagic);
+
+            if (ShowLessMagic.activeInHierarchy != lessMagic)
+                ShowLessMagic.SetActive(lessMagic);
         }
 
         private void ConsumeAndDecay()

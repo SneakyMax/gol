@@ -47,7 +47,7 @@ namespace Assets.Scripts
         {
             while (true)
             {
-                yield return new WaitForSeconds(1);
+                yield return new WaitForSeconds(0.5f);
 
                 var interactables = World.Instance.Interactables;
                 if (interactables.Count == 0)
@@ -76,6 +76,8 @@ namespace Assets.Scripts
 
             if (Target == null || Target.Active == false)
                 StateMachine.ChangeState<GolemIdle>();
+
+            StartCoroutine(CheckForInteractable());
         }
 
         public override void Update()
@@ -103,6 +105,24 @@ namespace Assets.Scripts
                         StateMachine.ChangeState<GolemAbsorbingMagic>();
                         break;
                 }
+            }
+        }
+
+        private IEnumerator CheckForInteractable()
+        {
+            while (true)
+            {
+                yield return new WaitForSeconds(1);
+
+                var interactables = World.Instance.Interactables;
+                if (interactables.Count == 0)
+                    continue;
+
+                var closestInteractable = interactables
+                    .Where(x => x.Active)
+                    .OrderBy(x => Vector3.Distance(Parent.Controller.transform.parent.position, x.FlatPosition)).FirstOrDefault();
+
+                Target = closestInteractable;
             }
         }
 
