@@ -23,8 +23,12 @@ namespace Assets.Scripts
 
     public class GolemGameplay : MonoBehaviour
     {
+        public static GolemGameplay Instance { get; private set; }
+
+        [AssignedInUnity]
         public int MaxRock = 1000;
 
+        [AssignedInUnity]
         public int MaxMagic = 1000;
 
         [Range(1, 100)]
@@ -39,6 +43,7 @@ namespace Assets.Scripts
         [Range(5, 200)]
         public float MaxConsume = 120;
 
+        [AssignedInUnity]
         public float DeathBuffer = 1f;
 
         [Range(0, 1)]
@@ -53,7 +58,10 @@ namespace Assets.Scripts
         private float rockConsume;
         private float magicConsume;
 
+        [AssignedInUnity]
         public float CurrentRock;
+
+        [AssignedInUnity]
         public float CurrentMagic; 
 
         public float CurrentRockPercent { get { return CurrentRock / MaxRock; } }
@@ -66,18 +74,38 @@ namespace Assets.Scripts
 
         public GolemController Controller { get; private set; }
 
+        [AssignedInUnity]
         public GameObject ShowMoreMagic;
+
+        [AssignedInUnity]
         public GameObject ShowLessMagic;
+
+        [AssignedInUnity]
         public GameObject ShowMoreRock;
+
+        [AssignedInUnity]
         public GameObject ShowLessRock;
 
+        [AssignedInUnity]
         public GameObject ShowSad;
 
+        [AssignedInUnity]
+        public bool DeathEnabled;
+
+        [AssignedInUnity]
+        public int GameplayLengthSeconds = 120;
+
         private bool maybeDead;
+
+        public TimeSpan TimeRemaining { get; private set; }
+        private float startTime;
+
+        public bool GameStarted { get; private set; }
 
         public void Awake()
         {
             Controller = GetComponent<GolemController>();
+            Instance = this;
         }
 
         public void Start()
@@ -92,6 +120,12 @@ namespace Assets.Scripts
             magicConsume = Random.Range(MinConsume, MaxConsume);
         }
 
+        public void StartGameplay()
+        {
+            startTime = Time.time;
+            GameStarted = true;
+        }
+
         public void Update()
         {
             if (IsStopped)
@@ -100,7 +134,21 @@ namespace Assets.Scripts
             ConsumeAndDecay();
             CheckDeath();
             CheckSad();
+            UpdateTimeRemaining();
+            CheckEndOfGame();
         }
+
+        private void CheckEndOfGame()
+        {
+            if (TimeRemaining.Ticks >= 0)
+                return;
+        }
+
+        private void UpdateTimeRemaining()
+        {
+            TimeRemaining = TimeSpan.FromSeconds(GameplayLengthSeconds - (Time.time - startTime));
+        }
+
 
         private void CheckSad()
         {
@@ -147,6 +195,9 @@ namespace Assets.Scripts
 
         private DeadType GetDeadType()
         {
+            if (!DeathEnabled)
+                return DeadType.NotDead;
+
             if (CurrentRock >= MaxRock)
                 return DeadType.TooMuchRock;
 
@@ -176,7 +227,7 @@ namespace Assets.Scripts
                     var bufferDeadness = GetDeadType();
                     if (bufferDeadness != DeadType.NotDead)
                     {
-                        ReallyDead( bufferDeadness);
+                        ReallyDead(bufferDeadness);
                     }
                     maybeDead = false;
                 });

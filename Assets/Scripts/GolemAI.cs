@@ -17,6 +17,7 @@ namespace Assets.Scripts
         public GolemController Controller { get { return GetComponent<GolemController>(); } }
         public GolemGameplay Gameplay { get { return GetComponent<GolemGameplay>(); } }
 
+        [AssignedInUnity]
         public float ReachedTargetRadius;
 
         public StateMachine StateMachine { get; private set; }
