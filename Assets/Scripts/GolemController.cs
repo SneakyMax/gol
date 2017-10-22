@@ -71,6 +71,7 @@ namespace Assets.Scripts
         private Quaternion targetFacing;
 
         private Vector3? targetPosition;
+        private float closeEnough;
 
         private GameObject debugTargetPosition;
 
@@ -156,9 +157,10 @@ namespace Assets.Scripts
             bodyMaterial.RebuildTextures();
         }
 
-        public void SetTargetPosition(Vector3 position)
+        public void SetTargetPosition(Vector3 position, float closeEnough = 0.0f)
         {
             targetPosition = position;
+            this.closeEnough = closeEnough;
         }
 
         public void Update()
@@ -220,11 +222,10 @@ namespace Assets.Scripts
                 AccelerateTowardsTarget();
             }
 
-            var distanceFromParent = transform.localPosition.DistanceTo(transform.parent.localPosition);
-            if (distanceFromParent >= MaxDistanceFromCenter)
+            var distanceFromParent = transform.localPosition.magnitude;
+            if (distanceFromParent > MaxDistanceFromCenter)
             {
-                transform.localPosition = (transform.localPosition - transform.parent.localPosition).normalized *
-                                          MaxDistanceFromCenter;
+                transform.localPosition = transform.localPosition.normalized * MaxDistanceFromCenter;
             }
 
             Dampening();

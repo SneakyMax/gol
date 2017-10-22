@@ -17,7 +17,8 @@ namespace Assets.Scripts
 
         public void Update()
         {
-            GetComponentInChildren<Text>().text = String.Format("{0:0.0}", 5.0f - (Time.time - startTime));
+            var timeRemaining = GolemGameplay.Instance != null ? GolemGameplay.Instance.TimeRemaining : TimeSpan.Zero;
+            GetComponentInChildren<Text>().text = String.Format("{0:0}:{1:00}", timeRemaining.Minutes, timeRemaining.Seconds);
         }
     }
 }

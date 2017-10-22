@@ -17,7 +17,7 @@ namespace Assets.Scripts
 
         public GolObject Magic { get { return Get("Magic"); } }
 
-        public GolObject Kitten { get { return Get("Kitten"); } }
+        public GolObject Toy { get { return Get("Toy"); } }
 
         public GameObject Ded;
 
@@ -32,8 +32,8 @@ namespace Assets.Scripts
                     interactables.Add(Rock);
                 if(Magic != null)
                     interactables.Add(Magic);
-                if(Kitten != null)
-                    interactables.Add(Kitten);
+                if(Toy != null)
+                    interactables.Add(Toy);
                 return interactables;
             }
         }

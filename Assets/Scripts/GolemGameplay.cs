@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using DG.Tweening;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -31,6 +32,9 @@ namespace Assets.Scripts
         [AssignedInUnity]
         public int MaxMagic = 1000;
 
+        [AssignedInUnity]
+        public int MaxFun = 1000;
+
         [Range(1, 100)]
         public float MinDecay = 10;
         
@@ -54,18 +58,24 @@ namespace Assets.Scripts
 
         private float rockDecay;
         private float magicDecay;
+        private float funDecay;
 
         private float rockConsume;
         private float magicConsume;
+        private float funConsume;
 
         [AssignedInUnity]
         public float CurrentRock;
 
         [AssignedInUnity]
-        public float CurrentMagic; 
+        public float CurrentMagic;
+
+        [AssignedInUnity]
+        public float CurrentFun;
 
         public float CurrentRockPercent { get { return CurrentRock / MaxRock; } }
         public float CurrentMagicPercent { get { return CurrentMagic / MaxMagic; } }
+        public float CurrentFunPercent { get { return CurrentFun / MaxFun; } }
 
         private bool consumingRock;
         private bool consumingMagic;
@@ -90,6 +100,12 @@ namespace Assets.Scripts
         public GameObject ShowSad;
 
         [AssignedInUnity]
+        public Transform HappyStartPosition;
+
+        [AssignedInUnity]
+        public GameObject HappyPrefab;
+
+        [AssignedInUnity]
         public bool DeathEnabled;
 
         [AssignedInUnity]
@@ -98,32 +114,48 @@ namespace Assets.Scripts
         private bool maybeDead;
 
         public TimeSpan TimeRemaining { get; private set; }
+
         private float startTime;
 
+        public float RockHappiness;
+        public float MagicHappiness;
+        public float FunHappiness;
+
         public bool GameStarted { get; private set; }
+
+        public float Happiness { get; private set; }
+        public int PlayCount { get; private set; }
+
+        public float LastSmash { get; set; }
+
 
         public void Awake()
         {
             Controller = GetComponent<GolemController>();
             Instance = this;
+            IsStopped = true;
         }
 
         public void Start()
         {
-            CurrentRock = MaxRock / 2.0f + Random.Range(-MaxRock / 5.0f, MaxRock / 5.0f);
-            CurrentMagic = MaxMagic / 2.0f + Random.Range(-MaxMagic / 5.0f, MaxMagic / 5.0f);
+            CurrentRock = MaxRock / 2.0f; // + Random.Range(-MaxRock / 5.0f, MaxRock / 5.0f);
+            CurrentMagic = MaxMagic / 2.0f; // + Random.Range(-MaxMagic / 5.0f, MaxMagic / 5.0f);
 
             rockDecay = Random.Range(MinDecay, MaxDecay);
             magicDecay = Random.Range(MinDecay, MaxDecay);
 
             rockConsume = Random.Range(MinConsume, MaxConsume);
             magicConsume = Random.Range(MinConsume, MaxConsume);
+            
+            LastSmash = Time.time;
         }
 
         public void StartGameplay()
         {
             startTime = Time.time;
             GameStarted = true;
+            IsStopped = false;
+            ScoreTracker.Instance.StartRound();
         }
 
         public void Update()
@@ -136,12 +168,18 @@ namespace Assets.Scripts
             CheckSad();
             UpdateTimeRemaining();
             CheckEndOfGame();
+            CalculateHappiness();
         }
 
         private void CheckEndOfGame()
         {
             if (TimeRemaining.Ticks >= 0)
                 return;
+
+            IsStopped = true;
+            GameStarted = false;
+            ScoreTracker.Instance.EndRound();
+            GetComponent<GolemAI>().StateMachine.ChangeState<EndGame>();
         }
 
         private void UpdateTimeRemaining()
@@ -168,6 +206,53 @@ namespace Assets.Scripts
 
             if (ShowLessMagic.activeInHierarchy != lessMagic)
                 ShowLessMagic.SetActive(lessMagic);
+        }
+
+        private void CalculateHappiness()
+        {
+            RockHappiness = CalculateRockHappiness();
+            MagicHappiness = CalculateMagicHappiness();
+            FunHappiness = CalculateFunHappiness();
+
+            var needs = Mathf.Clamp(Mathf.Min(RockHappiness, MagicHappiness), 0, 1);
+
+            var needsWeight = Mathf.Lerp(0.75f, 1, 1.0f - Mathf.Pow(needs, 2));
+            var otherWeight = 1.0f - needsWeight;
+
+            var needsNum = needs * needsWeight;
+            var other = FunHappiness * otherWeight;
+
+            Happiness = needsNum + other;
+        }
+        
+        private float CalculateRockHappiness()
+        {
+            var distanceFromSweetSpot = Mathf.Abs((MaxRock / 2.0f) - CurrentRock);
+
+            // TODO lerp
+            return 1.0f - (distanceFromSweetSpot / (MaxRock / 2.0f));
+        }
+
+        private float CalculateMagicHappiness()
+        {
+            var sweetSpotRange = 100;
+            var distanceFromSweetSpot = Mathf.Abs((MaxMagic / 2.0f) - CurrentMagic);
+            if (distanceFromSweetSpot < sweetSpotRange)
+                return 1.0f;
+
+            // TODO lerp
+            return 1.0f - (distanceFromSweetSpot / (MaxMagic / 2.0f));
+        }
+
+        private float CalculateFunHappiness()
+        {
+            var timeSinceLastSmash = TimeSpan.FromSeconds(Time.time - LastSmash);
+            var idealSmashRate = (float)GameplayLengthSeconds / ScoreTracker.Instance.NumberOfPlayForMaxScore;
+            var funHappiness = 1.0f - Mathf.Clamp((float)timeSinceLastSmash.TotalSeconds / (idealSmashRate * 5), 0, 1);
+
+            // Inverted quadratic
+            var curved = 1.0f - Mathf.Pow(1.0f - funHappiness, 2);
+            return curved;
         }
 
         private void ConsumeAndDecay()
@@ -320,6 +405,26 @@ namespace Assets.Scripts
         {
             consumingRock = false;
             consumingMagic = false;
+        }
+
+        public void OnSmash()
+        {
+            PlayCount += 1;
+            LastSmash = Time.time;
+            Happy();
+        }
+
+        private void Happy()
+        {
+            Instantiate(HappyPrefab, HappyStartPosition.position, Quaternion.identity);
+        }
+
+        public void SeenSomething()
+        {
+            if (GameStarted == false)
+            {
+                StartGameplay();
+            }
         }
     }
 }

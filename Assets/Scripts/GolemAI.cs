@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 
@@ -60,6 +61,7 @@ namespace Assets.Scripts
 
                 if (closestInteractable != null)
                 {
+                    Parent.Gameplay.SeenSomething();
                     StateMachine.GetState<GolemMoveToTarget>().Target = closestInteractable;
                     StateMachine.ChangeState<GolemMoveToTarget>();
                 }
@@ -104,6 +106,10 @@ namespace Assets.Scripts
                     case "Magic":
                         StateMachine.GetState<GolemAbsorbingMagic>().Magic = Target;
                         StateMachine.ChangeState<GolemAbsorbingMagic>();
+                        break;
+                    case "Toy":
+                        StateMachine.GetState<GolemInRangeOfToy>().Toy = Target;
+                        StateMachine.ChangeState<GolemInRangeOfToy>();
                         break;
                 }
             }
@@ -188,10 +194,76 @@ namespace Assets.Scripts
         }
     }
 
+    public class GolemInRangeOfToy : State<GolemAI>
+    {
+        public GolObject Toy { get; set; }
+
+        private Castle castle;
+        private bool isSmashing;
+
+        public GolemInRangeOfToy()
+        {
+            GolemAnimationEvents.Instance.Smash += SmashHappened;
+        }
+
+        private void SmashHappened()
+        {
+            if (castle != null)
+            {
+                castle.Smash();
+                isSmashing = false;
+            }
+        }
+
+        public override void Enter()
+        {
+            Parent.Controller.SetTargetPosition(Toy.FlatPosition);
+            Parent.Controller.Animator.SetBool("IsMoving", false);
+            castle = Toy.GetComponentInChildren<Castle>();
+            isSmashing = false;
+        }
+
+        public override void Update()
+        {
+            if (Toy == null || Toy.Active == false || Parent.GolemPosition.DistanceTo(Toy.FlatPosition) > Parent.ReachedTargetRadius)
+            {
+                StateMachine.ChangeState<GolemIdle>();
+                return;
+            }
+
+            var forward = ((Vector2) Parent.Controller.Body.forward).normalized;
+            var toCastle = ((Vector2)(Toy.FlatPosition - Parent.GolemPosition)).normalized;
+
+            // Must be mostly facing castle
+            if (Vector2.Dot(forward, toCastle) < 0.8)
+                return;
+
+            if (castle.CanBeSmashed && !isSmashing)
+            {
+                Debug.Log("SMASH");
+                Parent.Controller.Animator.SetTrigger("Smash");
+                isSmashing = true;
+            }
+        }
+
+        public override void Exit()
+        {
+        }
+    }
+
     public class GolemDead : State<GolemAI>
     {
         public override void Enter()
         {
+            Parent.Controller.SetTargetPosition(Parent.GolemPosition);
+        }
+    }
+
+    public class EndGame : State<GolemAI>
+    {
+        public override void Enter()
+        {
+            Parent.Controller.Animator.SetBool("IsMoving", false);
             Parent.Controller.SetTargetPosition(Parent.GolemPosition);
         }
     }

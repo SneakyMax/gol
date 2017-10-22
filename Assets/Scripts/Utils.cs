@@ -31,6 +31,11 @@ namespace Assets.Scripts
             return Vector3.Distance(a, b);
         }
 
+        public static float DistanceTo(this Vector2 a, Vector2 b)
+        {
+            return Vector2.Distance(a, b);
+        }
+
         public static float ChangeScale(float fromMin, float fromMax, float toMin, float toMax, float value)
         {
             return (value - fromMin) * ((toMax - toMin) / (fromMax - fromMin)) + toMin;
